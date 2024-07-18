@@ -1,19 +1,11 @@
 package com.example.demo.controller;
 
 import com.example.demo.repository.OrderDto;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.service.OrderService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.example.demo.service.OrderService;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -24,49 +16,26 @@ public class Controller {
 
     private final OrderService orderService;
 
-    @Autowired
     public Controller(OrderService orderService) {
         this.orderService = orderService;
     }
 
-    /**
-     * Создание заказа
-     *
-     * @param productIds Список id продуктов в заказе
-     */
     @PostMapping("/create")
     public void createOrder(@RequestBody List<Long> productIds) {
         orderService.createOrder(productIds);
     }
 
-    /**
-     * Оформление возврата на один из продуктов в заказе
-     *
-     * @param orderId Id заказа
-     * @param returnedProductId Id продукта, на который оформляется возврат
-     * @return Id продуктов в заказе, на которые еще не оформлен возврат
-     */
     @PostMapping("/{orderId}/return")
-    public List<Long> returnOrder(@PathVariable Long orderId,
-                                  @RequestBody Long returnedProductId) {
+    public List<Long> returnOrder(@PathVariable Long orderId, @RequestBody Long returnedProductId) {
         return orderService.returnOrder(orderId, returnedProductId);
     }
 
-    /**
-     * Выдача заказа получателю
-     *
-     * @param orderId Id заказа
-     */
-    @PostMapping("/{orderId}/return")
+    // Изменен маппинг для избежания конфликта
+    @PostMapping("/{orderId}/issue")
     public void issueOrder(@PathVariable Long orderId) {
         orderService.issueOrder(orderId);
     }
 
-    /**
-     * Получение всех существующих заказов
-     *
-     * @return Список заказов с продуктами(невозвращенными)
-     */
     @GetMapping("/all")
     public List<OrderDto> getAllOrders() {
         return orderService.getAllOrders();
@@ -77,3 +46,18 @@ public class Controller {
         return new ResponseEntity<>(e.getMessage(), new HttpHeaders(), HttpStatus.BAD_REQUEST);
     }
 }
+
+/*
+Дублирование маппинга для разных методов:
+Методы returnOrder и issueOrder используют один и тот же URL маппинг @PostMapping("/{orderId}/return").
+Это приведет к конфликту маппингов, и один из методов не будет доступен.
+Решение: Изменить маппинг одного из методов, чтобы избежать конфликта.
+
+Неконсистентное использование @Autowired:
+Внедрение зависимостей через конструктор является предпочтительным способом для final полей, но использование @Autowired
+на конструкторе избыточно при использовании современных версий Spring.
+Решение: Убрать @Autowired аннотацию с конструктора.
+
+Обработка исключений: В текущем контроллере есть базовая обработка исключений через @ExceptionHandler,
+но она может быть не достаточно информативной или гибкой для всех случаев использования.
+Решение: Рассмотреть использование ControllerAdvice для глобальной обработки исключений.*/
